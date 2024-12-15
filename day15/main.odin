@@ -1,4 +1,4 @@
-package aoc2024_pasta
+package aoc2024_day15
 
 import "core:fmt"
 import "core:os"
@@ -38,7 +38,6 @@ grid_get :: proc(grid: Grid, pos: [2]int) -> byte {
 grid_out_of_bound :: proc(grid: Grid, pos: [2]int) -> bool {
     return pos.x < 0 || pos.y < 0 || pos.x >= grid.width || pos.y >= grid.height
 }
-
 
 can_move_box :: proc(grid: Grid, box, move: [2]int) -> bool {
     new_box := box + move
