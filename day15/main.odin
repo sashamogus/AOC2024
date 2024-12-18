@@ -271,7 +271,6 @@ process_file :: proc(filename: string) -> (int, int) {
             }
         }
     }
-    buf: [256]byte
     for m, i in moves {
         robot_move(&grid, &robot, m)
         robot_move(&grid_big, &robot_big, m)
