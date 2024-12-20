@@ -73,52 +73,17 @@ map_distance :: proc(grid: Grid, start, end: [2]int) -> ([]int, [][2]int) {
     return min_distance, path[:]
 }
 
-count_all_skips :: proc(grid: Grid, distance: []int, path: [][2]int, start, end: [2]int) -> map[int]int {
-    skips_count := make(map[int]int)
-    for pos in path {
-        pos_index := grid_index(grid, pos)
-        dist := distance[pos_index]
-
-        for step1 in DIRS {
-            step1_pos := pos + step1
-            if grid_get(grid, step1_pos) != '#' {
-                continue
-            }
-
-            for step2 in DIRS {
-                step2_pos := step1_pos + step2
-                if grid_out_of_bound(grid, step2_pos) {
-                    continue
-                }
-                if grid_get(grid, step2_pos) != '#' {
-                    step2_index := grid_index(grid, step2_pos)
-                    skip := distance[step2_index] - dist - 2
-                    if skip > 0 {
-                        if skip in skips_count {
-                            skips_count[skip] += 1
-                        } else {
-                            skips_count[skip] = 1
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return skips_count
-}
-
-count_all_skips2 :: proc(grid: Grid, distance: []int, path: [][2]int, start, end: [2]int) -> map[int]int {
-    CHEAT_STEPS :: 20
+count_all_skips :: proc(grid: Grid, distance: []int, path: [][2]int, start, end: [2]int, cheat_steps: int) -> map[int]int {
     skips_count := make(map[int]int)
 
     for pos in path {
         pos_index := grid_index(grid, pos)
         dist := distance[pos_index]
 
-        for y in -CHEAT_STEPS..=CHEAT_STEPS {
-            for x in -CHEAT_STEPS..=CHEAT_STEPS {
+        for y in -cheat_steps..=cheat_steps {
+            for x in -cheat_steps..=cheat_steps {
                 cheat_d := abs(x) + abs(y)
-                if cheat_d > CHEAT_STEPS {
+                if cheat_d > cheat_steps {
                     continue
                 }
                 cheat := pos + { x, y }
@@ -170,8 +135,8 @@ process_file :: proc(filename: string) -> (int, int) {
         }
     }
     distance, path := map_distance(grid, start, end)
-    skips  := count_all_skips( grid, distance, path, start, end)
-    skips2 := count_all_skips2(grid, distance, path, start, end)
+    skips  := count_all_skips(grid, distance, path, start, end, 2)
+    skips2 := count_all_skips(grid, distance, path, start, end, 20)
     if filename == "example.txt" {
         fmt.println(skips2)
         assert(skips2[76] == 3)
