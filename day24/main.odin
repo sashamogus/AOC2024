@@ -22,6 +22,17 @@ reg_to_int :: proc(wire_map: map[string]int, reg_name: byte) -> int {
     return result
 }
 
+int_to_reg :: proc(wire_map: ^map[string]int, reg_name: byte, value: int) {
+    for k, v in wire_map {
+        if k[0] == reg_name {
+            e, e_ok := strconv.parse_int(k[1:])
+            assert(e_ok)
+            b := 1 << uint(e)
+            wire_map[k] = value & b != 0 ? 1 : 0
+        }
+    }
+}
+
 simulate_circuit :: proc(gates: []Gate, wire_map: map[string]int) -> int {
     wires := make(map[string]int, context.temp_allocator)
     for k, v in wire_map {
@@ -61,7 +72,26 @@ simulate_circuit :: proc(gates: []Gate, wire_map: map[string]int) -> int {
     return z
 }
 
-process_file :: proc(filename: string) -> (int, int) {
+bad_bits :: proc(gates: []Gate, wire_map: ^map[string]int, bits: int) -> []int {
+    result := make([dynamic]int)
+    for i in 0..<bits {
+        b := 1 << uint(i)
+        for j in 0..<4 {
+            x := j & 1 != 0 ? b : 0
+            y := j & 2 != 0 ? b : 0
+            int_to_reg(wire_map, 'x', x)
+            int_to_reg(wire_map, 'y', y)
+            z := simulate_circuit(gates, wire_map^)
+            if z != x + y {
+                append(&result, i)
+                break
+            }
+        }
+    }
+    return result[:]
+}
+
+process_file :: proc(filename: string) -> int {
     data, ok := os.read_entire_file(filename)
     assert(ok)
 
@@ -92,13 +122,87 @@ process_file :: proc(filename: string) -> (int, int) {
     }
     
     z := simulate_circuit(gates, wire_map)
-    return z, 0
+
+    if filename == "input.txt" {
+        xys := make([dynamic]string)
+        zs := make([dynamic]string)
+        others := make([dynamic]string)
+        for gstr in gates_str {
+            if gstr[0] == 'x' || gstr[8] == 'x' || gstr[0] == 'y' || gstr[8] == 'y' {
+                append(&xys, gstr)
+            } else if gstr[len(gstr) - 3] == 'z' {
+                append(&zs, gstr)
+            } else {
+                append(&others, gstr)
+            }
+        }
+
+        slice.sort_by(xys[:], proc(a, b: string) -> bool {
+            return strings.compare(a[1:], b[1:]) == -1
+        })
+
+        slice.sort_by(zs[:], proc(a, b: string) -> bool {
+            a_len := len(a)
+            b_len := len(b)
+            a_cmp := a[a_len - 2: a_len]
+            b_cmp := b[b_len - 2: b_len]
+            return strings.compare(a_cmp, b_cmp) == -1
+        })
+
+        slice.sort_by(others[:], proc(a, b: string) -> bool {
+            return strings.compare(a[4:7], b[4:7]) == -1
+        })
+
+        f, f_err := os.open("gates.txt", os.O_CREATE)
+        if f_err != nil {
+            fmt.println(f_err)
+        }
+        fmt.fprintln(f, "Inputs")
+        for xystr in xys {
+            fmt.fprintln(f, xystr)
+        }
+        fmt.fprintln(f) 
+
+        fmt.fprintln(f, "Outputs")
+        for zstr in zs {
+            fmt.fprintln(f, zstr)
+        }
+        fmt.fprintln(f) 
+
+        fmt.fprintln(f, "Middles")
+        for ostr in others {
+            fmt.fprintln(f, ostr)
+        }
+        fmt.fprintln(f) 
+        os.flush(f)
+        os.close(f)
+
+        fmt.println(bad_bits(gates, &wire_map, 45))
+    }
+    
+    return z
 }
 
 main :: proc() {
     {
         fmt.println(process_file("example.txt"))
         fmt.println(process_file("input.txt"))
+    }
+
+    // I found those manually lol
+    bad_wires := []string {
+        "z10",
+        "z21",
+        "z33",
+        "nks",
+        "gpr",
+        "ghp",
+        "krs",
+        "cpm",
+    }
+    slice.sort(bad_wires)
+    for w in bad_wires {
+        fmt.printf("%s,", w)
     }
 }
 
